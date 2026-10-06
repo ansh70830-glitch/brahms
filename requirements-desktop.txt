@@ -8,3 +8,12 @@ pyinstaller>=6.10.0
 # requests>=2.32.0
 # pillow>=10.4.0
 # PySide6>=6.7.0
+# Desktop build dependencies
+# Update these versions as needed for your project
+pyinstaller>=6.10.0
+
+# Add your app's runtime dependencies here
+# Example:
+# requests>=2.32.0
+# pillow>=10.4.0
+# PySide6>=6.7.0
