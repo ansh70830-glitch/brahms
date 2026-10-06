@@ -1,0 +1,61 @@
+name: Bhrams installers
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Find the app folder
+        run: python -c "import pathlib,os;f=sorted(pathlib.Path('.').rglob('requirements-desktop.txt'));print('Found:',f);d=str(f[0].parent) if f else '';open(os.environ['GITHUB_ENV'],'a').write('APPDIR='+d+'\n');exit(0 if f else 'requirements-desktop.txt is missing')"
+      - name: Install
+        run: cd "$APPDIR" && python -m pip install --upgrade pip && pip install -r requirements-desktop.txt
+      - name: Build app
+        run: cd "$APPDIR" && pyinstaller --noconfirm packaging/bhrams.spec
+      - name: Make DMG
+        run: cd "$APPDIR" && mkdir -p dist/dmg && cp -R dist/Bhrams.app dist/dmg/ && ln -s /Applications dist/dmg/Applications && hdiutil create -volname Bhrams -srcfolder dist/dmg -ov -format UDZO "dist/Bhrams-mac-$ARCH.dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bhrams-mac-${{ matrix.arch }}
+          path: ${{ env.APPDIR }}/dist/*.dmg
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Find the app folder
+        run: python -c "import pathlib,os;f=sorted(pathlib.Path('.').rglob('requirements-desktop.txt'));print('Found:',f);d=f[0].parent.as_posix() if f else '';open(os.environ['GITHUB_ENV'],'a').write('APPDIR='+d+'\n');exit(0 if f else 'requirements-desktop.txt is missing')"
+      - name: Install
+        run: cd "$APPDIR" && python -m pip install --upgrade pip && pip install -r requirements-desktop.txt
+      - name: Build app
+        run: cd "$APPDIR" && pyinstaller --noconfirm packaging/bhrams.spec
+      - name: Make installer
+        run: choco install innosetup -y --no-progress && cd "$APPDIR" && "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" packaging/installer.iss && cp dist/BhramsSetup-*.exe dist/BhramsSetup-windows.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bhrams-windows
+          path: ${{ env.APPDIR }}/dist/BhramsSetup-windows.exe
