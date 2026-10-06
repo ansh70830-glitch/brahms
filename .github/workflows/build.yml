@@ -1,4 +1,4 @@
-# Builds the Mac and Windows apps on GitHub's computers (free for public repos).
+# Builds the Mac and Windows apps on GitHub's computers (free minutes every month).
 # Push a tag like v1.0.0 to publish a release with download links:  git tag v1.0.0 && git push --tags
 name: Build desktop apps
 on:
@@ -23,7 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with:
+          python-version: "3.12"
       - run: pip install -r requirements-desktop.txt
       - run: pyinstaller --noconfirm packaging/bhrams.spec
       - name: Make DMG
@@ -31,14 +32,17 @@ jobs:
           mkdir -p dist/dmg && cp -R dist/Bhrams.app dist/dmg/ && ln -s /Applications dist/dmg/Applications
           hdiutil create -volname Bhrams -srcfolder dist/dmg -ov -format UDZO dist/Bhrams-mac-${{ matrix.arch }}.dmg
       - uses: actions/upload-artifact@v4
-        with: { name: Bhrams-mac-${{ matrix.arch }}, path: dist/Bhrams-mac-${{ matrix.arch }}.dmg }
+        with:
+          name: Bhrams-mac-${{ matrix.arch }}
+          path: dist/Bhrams-mac-${{ matrix.arch }}.dmg
 
   windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with:
+          python-version: "3.12"
       - run: pip install -r requirements-desktop.txt
       - run: pyinstaller --noconfirm packaging/bhrams.spec
       - name: Make installer
@@ -48,7 +52,9 @@ jobs:
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" packaging\installer.iss
           Copy-Item dist\BhramsSetup-*.exe dist\BhramsSetup-windows.exe
       - uses: actions/upload-artifact@v4
-        with: { name: Bhrams-windows, path: dist/BhramsSetup-windows.exe }
+        with:
+          name: Bhrams-windows
+          path: dist/BhramsSetup-windows.exe
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -56,7 +62,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
-        with: { path: out, merge-multiple: true }
+        with:
+          path: out
+          merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
           files: out/*
