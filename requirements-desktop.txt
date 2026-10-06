@@ -1,1 +1,10 @@
 ERROR: Could not open requirements file: [Errno 2] No such file or directory: 'requirements-desktop.txt'
+# requirements-desktop.txt
+# Required for building the desktop bundle
+pyinstaller>=6.10.0
+
+# Add your app's real runtime dependencies below
+# Example:
+# requests>=2.32.0
+# pillow>=10.4.0
+# PySide6>=6.7.0
