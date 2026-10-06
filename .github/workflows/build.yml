@@ -77,5 +77,121 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: out/*
+          generate_release_notes: true # Builds the Mac and Windows apps on GitHub's computers (free minutes every month).
+# Push a tag like v1.0.0 to publish a release with download links:  git tag v1.0.0 && git push --tags
+name: Build desktop apps
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install desktop dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements-desktop.txt ]; then
+            pip install -r requirements-desktop.txt
+          else
+            echo "ERROR: requirements-desktop.txt is missing"
+            exit 1
+          fi
+
+      - name: Build app bundle
+        shell: bash
+        run: |
+          if [ ! -f packaging/bhrams.spec ]; then
+            echo "ERROR: packaging/bhrams.spec is missing"
+            exit 1
+          fi
+          pyinstaller --noconfirm packaging/bhrams.spec
+
+      - name: Make DMG
+        shell: bash
+        run: |
+          mkdir -p dist/dmg
+          cp -R dist/Bhrams.app dist/dmg/
+          ln -s /Applications dist/dmg/Applications
+          hdiutil create -volname Bhrams -srcfolder dist/dmg -ov -format UDZO dist/Bhrams-mac-${{ matrix.arch }}.dmg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bhrams-mac-${{ matrix.arch }}
+          path: dist/Bhrams-mac-${{ matrix.arch }}.dmg
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install desktop dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path "requirements-desktop.txt") {
+            pip install -r requirements-desktop.txt
+          } else {
+            throw "ERROR: requirements-desktop.txt is missing"
+          }
+
+      - name: Build app bundle
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "packaging/bhrams.spec")) {
+            throw "ERROR: packaging/bhrams.spec is missing"
+          }
+          pyinstaller --noconfirm packaging/bhrams.spec
+
+      - name: Make installer
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" packaging\installer.iss
+          Copy-Item dist\BhramsSetup-*.exe dist\BhramsSetup-windows.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bhrams-windows
+          path: dist/BhramsSetup-windows.exe
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [mac, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
           generate_release_notes: true
+          
           
