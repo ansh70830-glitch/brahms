@@ -1,0 +1,5 @@
+pyinstaller>=6.0.0
+# Add other dependencies your app needs, for example:
+# requests
+# numpy
+# etc.
