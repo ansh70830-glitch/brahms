@@ -1,0 +1,7 @@
+Put the three installers in this folder, with exactly these names:
+
+  Bhrams-mac-arm64.dmg       (from the "Bhrams-mac-arm64" artifact on GitHub)
+  Bhrams-mac-x86_64.dmg      (from the "Bhrams-mac-x86_64" artifact)
+  BhramsSetup-windows.exe    (from the "Bhrams-windows" artifact)
+
+Then upload the whole "landing" folder to Netlify. The download buttons on the website find them automatically.
